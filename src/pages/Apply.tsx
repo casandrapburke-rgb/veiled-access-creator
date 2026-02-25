@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,11 +14,35 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { Upload, X, Camera } from "lucide-react";
 
 const Apply = () => {
   const { toast } = useToast();
   const [submitted, setSubmitted] = useState(false);
   const [ageError, setAgeError] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({ title: "File too large", description: "Maximum file size is 5MB.", variant: "destructive" });
+        return;
+      }
+      setPhoto(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setPhotoPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removePhoto = () => {
+    setPhoto(null);
+    setPhotoPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -30,21 +54,19 @@ const Apply = () => {
       return;
     }
     setAgeError("");
-
-    // For now, show success (will wire to DB later)
     setSubmitted(true);
   };
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-6">
+      <div className="min-h-screen bg-background flex items-center justify-center px-4 sm:px-6">
         <motion.div
           className="text-center max-w-lg"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <img src="/images/sigil.png" alt="Sigil" className="w-16 h-16 mx-auto sigil-glow mb-8" />
+          <img src="/images/sigil.png" alt="Illumi Echelon" className="w-16 h-16 mx-auto sigil-glow mb-8" />
           <h2 className="font-serif text-2xl md:text-3xl gold-gradient-text font-bold">
             Your request has been recorded.
           </h2>
@@ -52,9 +74,7 @@ const Apply = () => {
             If approved, you will receive a private Access Code.
           </p>
           <Link to="/">
-            <Button variant="heroOutline" className="mt-8">
-              Return
-            </Button>
+            <Button variant="heroOutline" className="mt-8">Return</Button>
           </Link>
         </motion.div>
       </div>
@@ -65,7 +85,7 @@ const Apply = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-2xl mx-auto px-6 py-20">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -75,10 +95,15 @@ const Apply = () => {
             ← Return
           </Link>
 
-          <h1 className="mt-8 font-serif text-3xl md:text-5xl font-bold gold-gradient-text">
+          <div className="mt-6 sm:mt-8 flex items-center gap-3">
+            <img src="/images/sigil.png" alt="" className="w-8 h-8 opacity-50" />
+            <span className="text-primary/50 text-xs tracking-[0.3em] uppercase font-body">Illumi Echelon</span>
+          </div>
+
+          <h1 className="mt-4 font-serif text-3xl sm:text-4xl md:text-5xl font-bold gold-gradient-text">
             Request Entry
           </h1>
-          <p className="mt-4 text-foreground/60 font-body text-lg">
+          <p className="mt-4 text-foreground/60 font-body text-base sm:text-lg">
             Entry is by referral. Every request is reviewed in silence.
           </p>
 
@@ -87,28 +112,65 @@ const Apply = () => {
 
         <motion.form
           onSubmit={handleSubmit}
-          className="mt-12 space-y-10"
+          className="mt-10 sm:mt-12 space-y-8 sm:space-y-10"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.3 }}
         >
-          {/* Personal Details */}
+          {/* Photo Upload */}
           <fieldset className="space-y-5">
+            <legend className="font-serif text-xl text-primary tracking-wide">Your Photograph</legend>
+            <div className="h-[1px] bg-border/40 mb-4" />
+            <div className="flex flex-col items-center gap-4">
+              {photoPreview ? (
+                <div className="relative">
+                  <img
+                    src={photoPreview}
+                    alt="Preview"
+                    className="w-32 h-32 sm:w-40 sm:h-40 rounded-full object-cover border-2 border-primary/30"
+                  />
+                  <button
+                    type="button"
+                    onClick={removePhoto}
+                    className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/80 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-2 border-dashed border-border hover:border-primary/50 bg-secondary/50 flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer group"
+                >
+                  <Camera className="w-8 h-8 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors tracking-wider uppercase">Upload</span>
+                </button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoChange}
+                className="hidden"
+              />
+              <p className="text-xs text-muted-foreground font-body">Recent photograph required. Max 5MB.</p>
+            </div>
+          </fieldset>
+
+          {/* Personal Details */}
+          <fieldset className="space-y-4 sm:space-y-5">
             <legend className="font-serif text-xl text-primary tracking-wide">Personal Details</legend>
             <div className="h-[1px] bg-border/40 mb-4" />
-
             <div>
               <Label htmlFor="fullName">Full Name *</Label>
               <Input id="fullName" name="fullName" required className={inputClasses} placeholder="Enter your full name" />
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <div>
                 <Label htmlFor="gender">Gender</Label>
                 <Select name="gender">
-                  <SelectTrigger className={inputClasses}>
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
+                  <SelectTrigger className={inputClasses}><SelectValue placeholder="Select" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="male">Male</SelectItem>
                     <SelectItem value="female">Female</SelectItem>
@@ -116,15 +178,13 @@ const Apply = () => {
                   </SelectContent>
                 </Select>
               </div>
-
               <div>
                 <Label htmlFor="age">Age *</Label>
                 <Input id="age" name="age" type="number" required min={18} className={inputClasses} placeholder="18+" />
                 {ageError && <p className="text-destructive text-sm mt-1">{ageError}</p>}
               </div>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
               <div>
                 <Label htmlFor="country">Country</Label>
                 <Input id="country" name="country" className={inputClasses} placeholder="Country" />
@@ -138,7 +198,6 @@ const Apply = () => {
                 <Input id="city" name="city" className={inputClasses} placeholder="City" />
               </div>
             </div>
-
             <div>
               <Label htmlFor="address">Full Residential Address</Label>
               <Textarea id="address" name="address" className={inputClasses} placeholder="Your full address" />
@@ -146,16 +205,14 @@ const Apply = () => {
           </fieldset>
 
           {/* Professional Details */}
-          <fieldset className="space-y-5">
+          <fieldset className="space-y-4 sm:space-y-5">
             <legend className="font-serif text-xl text-primary tracking-wide">Professional Details</legend>
             <div className="h-[1px] bg-border/40 mb-4" />
-
             <div>
               <Label htmlFor="occupation">Occupation</Label>
               <Input id="occupation" name="occupation" className={inputClasses} placeholder="Your occupation" />
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <div>
                 <Label htmlFor="income">Monthly Income (USD)</Label>
                 <div className="relative">
@@ -166,9 +223,7 @@ const Apply = () => {
               <div>
                 <Label htmlFor="maritalStatus">Marital Status</Label>
                 <Select name="maritalStatus">
-                  <SelectTrigger className={inputClasses}>
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
+                  <SelectTrigger className={inputClasses}><SelectValue placeholder="Select" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="single">Single</SelectItem>
                     <SelectItem value="married">Married</SelectItem>
@@ -180,7 +235,7 @@ const Apply = () => {
           </fieldset>
 
           {/* Family Reference */}
-          <fieldset className="space-y-5">
+          <fieldset className="space-y-4 sm:space-y-5">
             <legend className="font-serif text-xl text-primary tracking-wide">Family Reference</legend>
             <div className="h-[1px] bg-border/40 mb-4" />
             <div>
@@ -190,10 +245,10 @@ const Apply = () => {
           </fieldset>
 
           {/* Contact */}
-          <fieldset className="space-y-5">
+          <fieldset className="space-y-4 sm:space-y-5">
             <legend className="font-serif text-xl text-primary tracking-wide">Contact Information</legend>
             <div className="h-[1px] bg-border/40 mb-4" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <div>
                 <Label htmlFor="phone">Phone Number</Label>
                 <Input id="phone" name="phone" type="tel" className={inputClasses} placeholder="+1 (000) 000-0000" />
@@ -206,7 +261,7 @@ const Apply = () => {
           </fieldset>
 
           {/* Purpose */}
-          <fieldset className="space-y-5">
+          <fieldset className="space-y-4 sm:space-y-5">
             <legend className="font-serif text-xl text-primary tracking-wide">Purpose of Entry</legend>
             <div className="h-[1px] bg-border/40 mb-4" />
             <RadioGroup name="purpose" defaultValue="spiritual" className="space-y-3">
@@ -225,7 +280,7 @@ const Apply = () => {
           </fieldset>
 
           {/* Agent ID */}
-          <fieldset className="space-y-5">
+          <fieldset className="space-y-4 sm:space-y-5">
             <legend className="font-serif text-xl text-primary tracking-wide">Referral Verification</legend>
             <div className="h-[1px] bg-border/40 mb-4" />
             <div>
