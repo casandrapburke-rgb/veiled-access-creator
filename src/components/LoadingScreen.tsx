@@ -23,14 +23,22 @@ const LoadingScreen = ({ onComplete }: { onComplete: () => void }) => {
         >
           <motion.img
             src="/images/sigil.png"
-            alt="Sigil"
+            alt="Illumi Echelon Sigil"
             className="w-24 h-24 sigil-glow"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8 }}
           />
+          <motion.p
+            className="mt-6 font-serif text-primary text-lg tracking-[0.4em] uppercase"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+          >
+            Illumi Echelon
+          </motion.p>
           <motion.div
-            className="mt-8 h-[1px] bg-primary"
+            className="mt-6 h-[1px] bg-primary"
             initial={{ width: 0 }}
             animate={{ width: 200 }}
             transition={{ duration: 1.8, delay: 0.4 }}
