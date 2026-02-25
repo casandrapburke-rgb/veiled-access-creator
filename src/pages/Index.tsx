@@ -1,13 +1,23 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import LoadingScreen from "@/components/LoadingScreen";
+import HeroSection from "@/components/HeroSection";
+import SigilSection from "@/components/SigilSection";
+import PowerSection from "@/components/PowerSection";
+import SiteFooter from "@/components/SiteFooter";
 
 const Index = () => {
+  const [loading, setLoading] = useState(true);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <>
+      {loading && <LoadingScreen onComplete={() => setLoading(false)} />}
+      <div className={loading ? "opacity-0" : "opacity-100 transition-opacity duration-500"}>
+        <HeroSection />
+        <SigilSection />
+        <PowerSection />
+        <SiteFooter />
       </div>
-    </div>
+    </>
   );
 };
 
