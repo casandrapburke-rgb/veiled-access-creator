@@ -2,26 +2,50 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Lock } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Access = () => {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (code.length < 8 || code.length > 12) {
-      setError("Access Code must be 8–12 characters.");
+    
+    if (!code.trim()) {
+      setError("Access Key Required.");
       return;
     }
+
     setError("");
     setLoading(true);
-    setTimeout(() => {
+
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("validate-key", {
+        body: { access_key: code.trim() },
+      });
+
+      if (fnError || data?.error) {
+        setError(data?.error || "Invalid Key. Access Denied.");
+        setLoading(false);
+        return;
+      }
+
+      // Store session info
+      sessionStorage.setItem("ie_access_key", data.key);
+      sessionStorage.setItem("ie_role", data.role);
+      sessionStorage.setItem("ie_user_name", data.user_name);
+      sessionStorage.setItem("ie_last_activity", Date.now().toString());
+
+      navigate("/dashboard");
+    } catch {
+      setError("Connection error. Try again.");
+    } finally {
       setLoading(false);
-      setError("Access Denied.");
-    }, 1500);
+    }
   };
 
   return (
@@ -48,9 +72,9 @@ const Access = () => {
           <Input
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            placeholder="Access Code"
+            placeholder="Access Key"
             className="bg-secondary border-border text-foreground text-center tracking-[0.3em] text-lg placeholder:text-muted-foreground"
-            maxLength={12}
+            maxLength={20}
           />
 
           {error && (

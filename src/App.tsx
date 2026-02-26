@@ -7,6 +7,8 @@ import Index from "./pages/Index";
 import Apply from "./pages/Apply";
 import Access from "./pages/Access";
 import Dashboard from "./pages/Dashboard";
+import AdminLogin from "./pages/AdminLogin";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +24,8 @@ const App = () => (
           <Route path="/apply" element={<Apply />} />
           <Route path="/access" element={<Access />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
