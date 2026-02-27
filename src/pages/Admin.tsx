@@ -41,7 +41,6 @@ const Admin = () => {
   const [keys, setKeys] = useState<AccessKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
-  const [adminId, setAdminId] = useState<string>("");
 
   // New key dialog
   const [newKeyOpen, setNewKeyOpen] = useState(false);
@@ -61,19 +60,11 @@ const Admin = () => {
   const [msgTitle, setMsgTitle] = useState("");
   const [msgBody, setMsgBody] = useState("");
 
-  const checkAdmin = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { navigate("/admin-login"); return; }
-
-    const { data: roleData } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "admin")
-      .single();
-
-    if (!roleData) { navigate("/admin-login"); return; }
-    setAdminId(user.id);
+  const checkAdmin = useCallback(() => {
+    const isAdmin = sessionStorage.getItem("ie_admin_authenticated");
+    if (isAdmin !== "true") {
+      navigate("/admin-login");
+    }
   }, [navigate]);
 
   const fetchKeys = useCallback(async () => {
@@ -85,11 +76,11 @@ const Admin = () => {
   }, [filter]);
 
   useEffect(() => { checkAdmin(); }, [checkAdmin]);
-  useEffect(() => { if (adminId) fetchKeys(); }, [adminId, fetchKeys]);
+  useEffect(() => { fetchKeys(); }, [fetchKeys]);
 
   const logAction = async (action: string, details: Record<string, unknown>) => {
     await supabase.from("admin_audit_log").insert([{
-      admin_id: adminId,
+      admin_id: null,
       action,
       details: details as any,
     }]);
@@ -148,7 +139,7 @@ const Admin = () => {
       target_key: msgTarget === "broadcast" ? null : msgTarget,
       title: msgTitle,
       body: msgBody,
-      sent_by: adminId,
+      sent_by: null,
     });
     if (!error) {
       await logAction("send_message", { target: msgTarget, title: msgTitle });
@@ -165,8 +156,8 @@ const Admin = () => {
     toast({ title: "Copied", description: key });
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
+    sessionStorage.removeItem("ie_admin_authenticated");
     navigate("/admin-login");
   };
 

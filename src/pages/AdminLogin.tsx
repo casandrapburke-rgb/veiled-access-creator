@@ -7,8 +7,7 @@ import { Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const AdminLogin = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [key, setKey] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -19,32 +18,17 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
+      const { data, error: fnError } = await supabase.functions.invoke("validate-admin-key", {
+        body: { admin_key: key.trim() },
       });
 
-      if (authError) {
-        setError("Invalid credentials.");
+      if (fnError || !data?.success) {
+        setError(data?.error || "Invalid credentials.");
         setLoading(false);
         return;
       }
 
-      // Check admin role
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", data.user.id)
-        .eq("role", "admin")
-        .single();
-
-      if (!roleData) {
-        await supabase.auth.signOut();
-        setError("Access denied. Admin only.");
-        setLoading(false);
-        return;
-      }
-
+      sessionStorage.setItem("ie_admin_authenticated", "true");
       navigate("/admin");
     } catch {
       setError("Connection error.");
@@ -69,18 +53,10 @@ const AdminLogin = () => {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <Input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
-            className="bg-secondary border-border text-foreground"
-            required
-          />
-          <Input
             type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            placeholder="Enter Admin Key"
             className="bg-secondary border-border text-foreground"
             required
           />
