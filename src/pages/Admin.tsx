@@ -14,7 +14,8 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { LogOut, Plus, Send, Copy, Trash2, Edit, RefreshCw } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LogOut, Plus, Send, Copy, Trash2, Edit, RefreshCw, Users, FileText, Eye } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface AccessKey {
@@ -25,6 +26,28 @@ interface AccessKey {
   status: string;
   date_issued: string;
   last_login: string | null;
+}
+
+interface Application {
+  id: string;
+  full_name: string;
+  gender: string | null;
+  age: number;
+  country: string | null;
+  state: string | null;
+  city: string | null;
+  address: string | null;
+  occupation: string | null;
+  income: number | null;
+  marital_status: string | null;
+  parent_name: string | null;
+  phone: string | null;
+  email: string | null;
+  purpose: string | null;
+  agent_id: string;
+  photo_url: string | null;
+  status: string;
+  created_at: string;
 }
 
 const generateKey = (length = 12) => {
@@ -60,6 +83,12 @@ const Admin = () => {
   const [msgTitle, setMsgTitle] = useState("");
   const [msgBody, setMsgBody] = useState("");
 
+  // Applications
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [appLoading, setAppLoading] = useState(true);
+  const [viewApp, setViewApp] = useState<Application | null>(null);
+  const [viewAppOpen, setViewAppOpen] = useState(false);
+
   const checkAdmin = useCallback(() => {
     const isAdmin = sessionStorage.getItem("ie_admin_authenticated");
     if (isAdmin !== "true") {
@@ -75,8 +104,15 @@ const Admin = () => {
     setLoading(false);
   }, [filter]);
 
+  const fetchApplications = useCallback(async () => {
+    const { data } = await supabase.from("applications").select("*").order("created_at", { ascending: false });
+    setApplications((data as any[]) || []);
+    setAppLoading(false);
+  }, []);
+
   useEffect(() => { checkAdmin(); }, [checkAdmin]);
   useEffect(() => { fetchKeys(); }, [fetchKeys]);
+  useEffect(() => { fetchApplications(); }, [fetchApplications]);
 
   const logAction = async (action: string, details: Record<string, unknown>) => {
     await supabase.from("admin_audit_log").insert([{
@@ -183,136 +219,218 @@ const Admin = () => {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        <h1 className="font-serif text-2xl sm:text-3xl gold-gradient-text font-bold mb-6">Key Management</h1>
+        <h1 className="font-serif text-2xl sm:text-3xl gold-gradient-text font-bold mb-6">Admin Panel</h1>
 
-        {/* Actions bar */}
-        <div className="flex flex-wrap gap-3 mb-6">
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-[140px] bg-secondary border-border">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Keys</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="revoked">Revoked</SelectItem>
-            </SelectContent>
-          </Select>
+        <Tabs defaultValue="keys" className="w-full">
+          <TabsList className="bg-secondary border border-border/30 mb-6">
+            <TabsTrigger value="keys" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+              <Users className="w-4 h-4 mr-1.5" /> Keys
+            </TabsTrigger>
+            <TabsTrigger value="applications" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+              <FileText className="w-4 h-4 mr-1.5" /> Applications
+              {applications.filter(a => a.status === "pending").length > 0 && (
+                <Badge variant="destructive" className="ml-1.5 text-[10px] px-1.5 py-0">
+                  {applications.filter(a => a.status === "pending").length}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
 
-          <Dialog open={newKeyOpen} onOpenChange={setNewKeyOpen}>
-            <DialogTrigger asChild>
-              <Button variant="hero" size="sm"><Plus className="w-4 h-4 mr-1" /> Add Key</Button>
-            </DialogTrigger>
-            <DialogContent className="bg-card border-border">
-              <DialogHeader><DialogTitle className="font-serif text-primary">Generate New Key</DialogTitle></DialogHeader>
-              <div className="space-y-4 mt-4">
-                <Input placeholder="Assigned User Name" value={newUserName} onChange={(e) => setNewUserName(e.target.value)} className="bg-secondary border-border" />
-                <Select value={newRole} onValueChange={setNewRole}>
-                  <SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="layperson">Layperson</SelectItem>
-                    <SelectItem value="agent">Agent</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button variant="hero" onClick={handleAddKey} className="w-full">Generate & Save</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          {/* Keys Tab */}
+          <TabsContent value="keys">
+            {/* Actions bar */}
+            <div className="flex flex-wrap gap-3 mb-6">
+              <Select value={filter} onValueChange={setFilter}>
+                <SelectTrigger className="w-[140px] bg-secondary border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Keys</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="revoked">Revoked</SelectItem>
+                </SelectContent>
+              </Select>
 
-          <Dialog open={msgOpen} onOpenChange={setMsgOpen}>
-            <DialogTrigger asChild>
-              <Button variant="heroOutline" size="sm"><Send className="w-4 h-4 mr-1" /> Send Message</Button>
-            </DialogTrigger>
-            <DialogContent className="bg-card border-border">
-              <DialogHeader><DialogTitle className="font-serif text-primary">Send Communication</DialogTitle></DialogHeader>
-              <div className="space-y-4 mt-4">
-                <Select value={msgTarget} onValueChange={setMsgTarget}>
-                  <SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="broadcast">Broadcast (All Active)</SelectItem>
-                    {keys.filter(k => k.status === "active").map(k => (
-                      <SelectItem key={k.id} value={k.access_key}>{k.assigned_user_name} ({k.access_key.slice(0, 6)}...)</SelectItem>
+              <Dialog open={newKeyOpen} onOpenChange={setNewKeyOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="hero" size="sm"><Plus className="w-4 h-4 mr-1" /> Add Key</Button>
+                </DialogTrigger>
+                <DialogContent className="bg-card border-border">
+                  <DialogHeader><DialogTitle className="font-serif text-primary">Generate New Key</DialogTitle></DialogHeader>
+                  <div className="space-y-4 mt-4">
+                    <Input placeholder="Assigned User Name" value={newUserName} onChange={(e) => setNewUserName(e.target.value)} className="bg-secondary border-border" />
+                    <Select value={newRole} onValueChange={setNewRole}>
+                      <SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="layperson">Layperson</SelectItem>
+                        <SelectItem value="agent">Agent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button variant="hero" onClick={handleAddKey} className="w-full">Generate & Save</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={msgOpen} onOpenChange={setMsgOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="heroOutline" size="sm"><Send className="w-4 h-4 mr-1" /> Send Message</Button>
+                </DialogTrigger>
+                <DialogContent className="bg-card border-border">
+                  <DialogHeader><DialogTitle className="font-serif text-primary">Send Communication</DialogTitle></DialogHeader>
+                  <div className="space-y-4 mt-4">
+                    <Select value={msgTarget} onValueChange={setMsgTarget}>
+                      <SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="broadcast">Broadcast (All Active)</SelectItem>
+                        {keys.filter(k => k.status === "active").map(k => (
+                          <SelectItem key={k.id} value={k.access_key}>{k.assigned_user_name} ({k.access_key.slice(0, 6)}...)</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input placeholder="Title" value={msgTitle} onChange={(e) => setMsgTitle(e.target.value)} className="bg-secondary border-border" />
+                    <Textarea placeholder="Message body..." value={msgBody} onChange={(e) => setMsgBody(e.target.value)} className="bg-secondary border-border min-h-[100px]" />
+                    <Button variant="hero" onClick={handleSendMessage} className="w-full" disabled={!msgTitle || !msgBody}>Send</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Button variant="ghost" size="sm" onClick={fetchKeys}><RefreshCw className="w-4 h-4" /></Button>
+            </div>
+
+            {/* Keys Table */}
+            {loading ? (
+              <p className="text-muted-foreground animate-pulse">Loading...</p>
+            ) : (
+              <div className="border border-border/30 rounded overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border/30 hover:bg-transparent">
+                      <TableHead className="text-primary/70 font-serif">Access Key</TableHead>
+                      <TableHead className="text-primary/70 font-serif">User</TableHead>
+                      <TableHead className="text-primary/70 font-serif">Role</TableHead>
+                      <TableHead className="text-primary/70 font-serif">Status</TableHead>
+                      <TableHead className="text-primary/70 font-serif">Issued</TableHead>
+                      <TableHead className="text-primary/70 font-serif">Last Login</TableHead>
+                      <TableHead className="text-primary/70 font-serif text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {keys.map((key) => (
+                      <TableRow key={key.id} className="border-border/20 hover:bg-secondary/30">
+                        <TableCell className="font-mono text-xs text-foreground/80">
+                          <span className="flex items-center gap-1">
+                            {key.access_key}
+                            <button onClick={() => copyKey(key.access_key)} className="text-primary/40 hover:text-primary transition-colors">
+                              <Copy className="w-3 h-3" />
+                            </button>
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-foreground/80 text-sm">{key.assigned_user_name}</TableCell>
+                        <TableCell>
+                          <Badge variant={key.role === "agent" ? "default" : "secondary"} className="text-xs capitalize">
+                            {key.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={key.status === "active" ? "default" : "destructive"} className="text-xs capitalize">
+                            {key.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-foreground/60 text-xs">
+                          {new Date(key.date_issued).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-foreground/60 text-xs">
+                          {key.last_login ? new Date(key.last_login).toLocaleString() : "Never"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => openEdit(key)} className="p-1.5 text-muted-foreground hover:text-primary transition-colors">
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            {key.status === "active" && (
+                              <button onClick={() => handleRevokeKey(key)} className="p-1.5 text-muted-foreground hover:text-primary/70 transition-colors">
+                                <RefreshCw className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            <button onClick={() => handleDeleteKey(key)} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </SelectContent>
-                </Select>
-                <Input placeholder="Title" value={msgTitle} onChange={(e) => setMsgTitle(e.target.value)} className="bg-secondary border-border" />
-                <Textarea placeholder="Message body..." value={msgBody} onChange={(e) => setMsgBody(e.target.value)} className="bg-secondary border-border min-h-[100px]" />
-                <Button variant="hero" onClick={handleSendMessage} className="w-full" disabled={!msgTitle || !msgBody}>Send</Button>
+                  </TableBody>
+                </Table>
               </div>
-            </DialogContent>
-          </Dialog>
+            )}
+          </TabsContent>
 
-          <Button variant="ghost" size="sm" onClick={fetchKeys}><RefreshCw className="w-4 h-4" /></Button>
-        </div>
+          {/* Applications Tab */}
+          <TabsContent value="applications">
+            <div className="flex items-center gap-3 mb-6">
+              <Button variant="ghost" size="sm" onClick={fetchApplications}><RefreshCw className="w-4 h-4" /></Button>
+              <span className="text-muted-foreground text-sm">{applications.length} total applications</span>
+            </div>
 
-        {/* Keys Table */}
-        {loading ? (
-          <p className="text-muted-foreground animate-pulse">Loading...</p>
-        ) : (
-          <div className="border border-border/30 rounded overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border/30 hover:bg-transparent">
-                  <TableHead className="text-primary/70 font-serif">Access Key</TableHead>
-                  <TableHead className="text-primary/70 font-serif">User</TableHead>
-                  <TableHead className="text-primary/70 font-serif">Role</TableHead>
-                  <TableHead className="text-primary/70 font-serif">Status</TableHead>
-                  <TableHead className="text-primary/70 font-serif">Issued</TableHead>
-                  <TableHead className="text-primary/70 font-serif">Last Login</TableHead>
-                  <TableHead className="text-primary/70 font-serif text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {keys.map((key) => (
-                  <TableRow key={key.id} className="border-border/20 hover:bg-secondary/30">
-                    <TableCell className="font-mono text-xs text-foreground/80">
-                      <span className="flex items-center gap-1">
-                        {key.access_key}
-                        <button onClick={() => copyKey(key.access_key)} className="text-primary/40 hover:text-primary transition-colors">
-                          <Copy className="w-3 h-3" />
-                        </button>
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-foreground/80 text-sm">{key.assigned_user_name}</TableCell>
-                    <TableCell>
-                      <Badge variant={key.role === "agent" ? "default" : "secondary"} className="text-xs capitalize">
-                        {key.role}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={key.status === "active" ? "default" : "destructive"} className="text-xs capitalize">
-                        {key.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-foreground/60 text-xs">
-                      {new Date(key.date_issued).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-foreground/60 text-xs">
-                      {key.last_login ? new Date(key.last_login).toLocaleString() : "Never"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => openEdit(key)} className="p-1.5 text-muted-foreground hover:text-primary transition-colors">
-                          <Edit className="w-3.5 h-3.5" />
-                        </button>
-                        {key.status === "active" && (
-                          <button onClick={() => handleRevokeKey(key)} className="p-1.5 text-muted-foreground hover:text-primary/70 transition-colors">
-                            <RefreshCw className="w-3.5 h-3.5" />
+            {appLoading ? (
+              <p className="text-muted-foreground animate-pulse">Loading...</p>
+            ) : applications.length === 0 ? (
+              <p className="text-muted-foreground text-center py-12">No applications yet.</p>
+            ) : (
+              <div className="border border-border/30 rounded overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border/30 hover:bg-transparent">
+                      <TableHead className="text-primary/70 font-serif">Name</TableHead>
+                      <TableHead className="text-primary/70 font-serif">Age</TableHead>
+                      <TableHead className="text-primary/70 font-serif">Location</TableHead>
+                      <TableHead className="text-primary/70 font-serif">Purpose</TableHead>
+                      <TableHead className="text-primary/70 font-serif">Agent ID</TableHead>
+                      <TableHead className="text-primary/70 font-serif">Status</TableHead>
+                      <TableHead className="text-primary/70 font-serif">Date</TableHead>
+                      <TableHead className="text-primary/70 font-serif text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {applications.map((app) => (
+                      <TableRow key={app.id} className="border-border/20 hover:bg-secondary/30">
+                        <TableCell className="text-foreground/80 text-sm font-medium">{app.full_name}</TableCell>
+                        <TableCell className="text-foreground/60 text-sm">{app.age}</TableCell>
+                        <TableCell className="text-foreground/60 text-xs">
+                          {[app.city, app.state, app.country].filter(Boolean).join(", ") || "—"}
+                        </TableCell>
+                        <TableCell className="text-foreground/60 text-xs capitalize">{app.purpose || "—"}</TableCell>
+                        <TableCell className="font-mono text-xs text-foreground/80">{app.agent_id}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={app.status === "approved" ? "default" : app.status === "denied" ? "destructive" : "secondary"}
+                            className="text-xs capitalize"
+                          >
+                            {app.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-foreground/60 text-xs">
+                          {new Date(app.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <button
+                            onClick={() => { setViewApp(app); setViewAppOpen(true); }}
+                            className="p-1.5 text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
                           </button>
-                        )}
-                        <button onClick={() => handleDeleteKey(key)} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
-      {/* Edit Dialog */}
+      {/* Edit Key Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="bg-card border-border">
           <DialogHeader><DialogTitle className="font-serif text-primary">Edit Key</DialogTitle></DialogHeader>
@@ -334,6 +452,69 @@ const Admin = () => {
             </Select>
             <Button variant="hero" onClick={handleEditKey} className="w-full">Save Changes</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Application Dialog */}
+      <Dialog open={viewAppOpen} onOpenChange={setViewAppOpen}>
+        <DialogContent className="bg-card border-border max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="font-serif text-primary">Application Details</DialogTitle></DialogHeader>
+          {viewApp && (
+            <div className="space-y-4 mt-4">
+              {viewApp.photo_url && (
+                <div className="flex justify-center">
+                  <img src={viewApp.photo_url} alt={viewApp.full_name} className="w-24 h-24 rounded-full object-cover border-2 border-primary/30" />
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-muted-foreground">Name:</span><p className="text-foreground">{viewApp.full_name}</p></div>
+                <div><span className="text-muted-foreground">Age:</span><p className="text-foreground">{viewApp.age}</p></div>
+                <div><span className="text-muted-foreground">Gender:</span><p className="text-foreground capitalize">{viewApp.gender || "—"}</p></div>
+                <div><span className="text-muted-foreground">Marital Status:</span><p className="text-foreground capitalize">{viewApp.marital_status || "—"}</p></div>
+                <div><span className="text-muted-foreground">Country:</span><p className="text-foreground">{viewApp.country || "—"}</p></div>
+                <div><span className="text-muted-foreground">State:</span><p className="text-foreground">{viewApp.state || "—"}</p></div>
+                <div><span className="text-muted-foreground">City:</span><p className="text-foreground">{viewApp.city || "—"}</p></div>
+                <div><span className="text-muted-foreground">Occupation:</span><p className="text-foreground">{viewApp.occupation || "—"}</p></div>
+                <div><span className="text-muted-foreground">Income:</span><p className="text-foreground">{viewApp.income ? `$${viewApp.income}` : "—"}</p></div>
+                <div><span className="text-muted-foreground">Purpose:</span><p className="text-foreground capitalize">{viewApp.purpose || "—"}</p></div>
+                <div><span className="text-muted-foreground">Agent ID:</span><p className="text-foreground font-mono">{viewApp.agent_id}</p></div>
+                <div><span className="text-muted-foreground">Parent:</span><p className="text-foreground">{viewApp.parent_name || "—"}</p></div>
+                <div><span className="text-muted-foreground">Phone:</span><p className="text-foreground">{viewApp.phone || "—"}</p></div>
+                <div><span className="text-muted-foreground">Email:</span><p className="text-foreground">{viewApp.email || "—"}</p></div>
+              </div>
+              <div><span className="text-muted-foreground text-sm">Address:</span><p className="text-foreground text-sm">{viewApp.address || "—"}</p></div>
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="hero"
+                  size="sm"
+                  className="flex-1"
+                  onClick={async () => {
+                    await supabase.from("applications").update({ status: "approved" }).eq("id", viewApp.id);
+                    toast({ title: "Application Approved" });
+                    setViewAppOpen(false);
+                    fetchApplications();
+                  }}
+                  disabled={viewApp.status === "approved"}
+                >
+                  Approve
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="flex-1"
+                  onClick={async () => {
+                    await supabase.from("applications").update({ status: "denied" }).eq("id", viewApp.id);
+                    toast({ title: "Application Denied" });
+                    setViewAppOpen(false);
+                    fetchApplications();
+                  }}
+                  disabled={viewApp.status === "denied"}
+                >
+                  Deny
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

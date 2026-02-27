@@ -15,6 +15,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { Upload, X, Camera } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Apply = () => {
   const { toast } = useToast();
@@ -44,7 +45,9 @@ const Apply = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const age = parseInt(formData.get("age") as string);
@@ -54,6 +57,48 @@ const Apply = () => {
       return;
     }
     setAgeError("");
+    setSubmitting(true);
+
+    // Upload photo if exists
+    let photo_url: string | null = null;
+    if (photo) {
+      const ext = photo.name.split('.').pop();
+      const fileName = `${Date.now()}.${ext}`;
+      const { data: uploadData } = await supabase.storage
+        .from("application-photos")
+        .upload(fileName, photo);
+      if (uploadData) {
+        const { data: urlData } = supabase.storage
+          .from("application-photos")
+          .getPublicUrl(fileName);
+        photo_url = urlData.publicUrl;
+      }
+    }
+
+    const { error } = await supabase.from("applications").insert({
+      full_name: formData.get("fullName") as string,
+      gender: formData.get("gender") as string || null,
+      age,
+      country: formData.get("country") as string || null,
+      state: formData.get("state") as string || null,
+      city: formData.get("city") as string || null,
+      address: formData.get("address") as string || null,
+      occupation: formData.get("occupation") as string || null,
+      income: formData.get("income") ? parseFloat(formData.get("income") as string) : null,
+      marital_status: formData.get("maritalStatus") as string || null,
+      parent_name: formData.get("parentName") as string || null,
+      phone: formData.get("phone") as string || null,
+      email: formData.get("email") as string || null,
+      purpose: formData.get("purpose") as string || "spiritual",
+      agent_id: formData.get("agentId") as string,
+      photo_url,
+    });
+
+    if (error) {
+      toast({ title: "Submission failed", description: "Please try again.", variant: "destructive" });
+      setSubmitting(false);
+      return;
+    }
     setSubmitted(true);
   };
 
@@ -296,8 +341,8 @@ const Apply = () => {
             </div>
           </fieldset>
 
-          <Button variant="hero" size="lg" type="submit" className="w-full">
-            Submit for Silent Review
+          <Button variant="hero" size="lg" type="submit" className="w-full" disabled={submitting}>
+            {submitting ? "Submitting..." : "Submit for Silent Review"}
           </Button>
         </motion.form>
       </div>

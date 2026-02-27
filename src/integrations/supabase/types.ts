@@ -71,6 +71,72 @@ export type Database = {
         }
         Relationships: []
       }
+      applications: {
+        Row: {
+          address: string | null
+          age: number
+          agent_id: string
+          city: string | null
+          country: string | null
+          created_at: string
+          email: string | null
+          full_name: string
+          gender: string | null
+          id: string
+          income: number | null
+          marital_status: string | null
+          occupation: string | null
+          parent_name: string | null
+          phone: string | null
+          photo_url: string | null
+          purpose: string | null
+          state: string | null
+          status: string
+        }
+        Insert: {
+          address?: string | null
+          age: number
+          agent_id: string
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          full_name: string
+          gender?: string | null
+          id?: string
+          income?: number | null
+          marital_status?: string | null
+          occupation?: string | null
+          parent_name?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          purpose?: string | null
+          state?: string | null
+          status?: string
+        }
+        Update: {
+          address?: string | null
+          age?: number
+          agent_id?: string
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          gender?: string | null
+          id?: string
+          income?: number | null
+          marital_status?: string | null
+          occupation?: string | null
+          parent_name?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          purpose?: string | null
+          state?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           body: string
